@@ -397,7 +397,8 @@ const firebaseConfig = {
     projectId: "amtool-b4bb3",
     storageBucket: "amtool-b4bb3.firebasestorage.app",
     messagingSenderId: "388335177291",
-    appId: "1:388335177291:web:26648ab80d8e876a9547ce"
+    appId: "1:388335177291:web:26648ab80d8e876a9547ce",
+    databaseURL: "https://amtool-b4bb3-default-rtdb.firebaseio.com"
 };
 
 // Initialize Firebase
@@ -413,11 +414,18 @@ const searchInput = document.getElementById('search');
 // Load Data
 let allData = {};
 function loadData() {
-    if (!auth.currentUser) return;
-    const personsRef = ref(db, 'persons');
-    onValue(personsRef, snapshot => {
+    if (!auth.currentUser) {
+        console.log('No user logged in');
+        return;
+    }
+    
+    console.log('Loading data for user:', auth.currentUser.uid);
+    const userPersonsRef = ref(db, `users/${auth.currentUser.uid}/persons`);
+    onValue(userPersonsRef, snapshot => {
         allData = snapshot.val() || {};
         renderTree(allData);
+    }, error => {
+        console.error('Error loading data:', error);
     });
 }
 
@@ -460,33 +468,50 @@ function renderTree(data) {
 }
 
 // Save Data
-form.addEventListener('submit', e => {
+form.addEventListener('submit', async e => {
     e.preventDefault();
-    const id = document.getElementById('person-id').value || push(ref(db, 'persons')).key;
-    const person = {
-        name: document.getElementById('name').value,
-        email: document.getElementById('email').value,
-        phone: document.getElementById('phone').value,
-        type: document.getElementById('type').value,
-        company: document.getElementById('company').value
-    };
+    if (!auth.currentUser) {
+        alert('Please login first');
+        return;
+    }
 
-    const personRef = ref(db, 'persons/' + id);
-    update(personRef, person);
-    form.reset();
+    try {
+        const id = document.getElementById('person-id').value || push(ref(db, `users/${auth.currentUser.uid}/persons`)).key;
+        const person = {
+            name: document.getElementById('name').value,
+            email: document.getElementById('email').value,
+            phone: document.getElementById('phone').value,
+            type: document.getElementById('type').value,
+            company: document.getElementById('company').value
+        };
+
+        await update(ref(db, `users/${auth.currentUser.uid}/persons/${id}`), person);
+        form.reset();
+        document.getElementById('person-id').value = '';
+    } catch (error) {
+        console.error('Error saving data:', error);
+        alert('Error saving data: ' + error.message);
+    }
 });
 
 // Edit Person
 window.editPerson = function(id) {
-    const personRef = ref(db, 'persons/' + id);
+    if (!auth.currentUser) {
+        alert('Please login first');
+        return;
+    }
+    
+    const personRef = ref(db, `users/${auth.currentUser.uid}/persons/${id}`);
     onValue(personRef, snapshot => {
         const person = snapshot.val();
-        document.getElementById('person-id').value = id;
-        document.getElementById('name').value = person.name;
-        document.getElementById('email').value = person.email;
-        document.getElementById('phone').value = person.phone;
-        document.getElementById('type').value = person.type;
-        document.getElementById('company').value = person.company;
+        if (person) {
+            document.getElementById('person-id').value = id;
+            document.getElementById('name').value = person.name;
+            document.getElementById('email').value = person.email;
+            document.getElementById('phone').value = person.phone;
+            document.getElementById('type').value = person.type;
+            document.getElementById('company').value = person.company;
+        }
     }, { onlyOnce: true });
 };
 
@@ -504,10 +529,19 @@ window.closeDeleteModal = function() {
 };
 
 window.confirmDelete = function() {
+    if (!auth.currentUser) {
+        alert('Please login first');
+        return;
+    }
+    
     if (personToDelete) {
-        const personRef = ref(db, 'persons/' + personToDelete);
-        remove(personRef);
-        closeDeleteModal();
+        const personRef = ref(db, `users/${auth.currentUser.uid}/persons/${personToDelete}`);
+        remove(personRef).then(() => {
+            closeDeleteModal();
+        }).catch(error => {
+            console.error('Error deleting:', error);
+            alert('Error deleting: ' + error.message);
+        });
     }
 };
 
@@ -597,6 +631,11 @@ onAuthStateChanged(auth, (user) => {
         // User is signed out
         loginContainer.style.display = 'block';
         mainContent.style.display = 'none';
+        // Clear existing data
+        allData = {};
+        treeContainer.innerHTML = '';
+        form.reset();
+        document.getElementById('person-id').value = '';
     }
 });
 
