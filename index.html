@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Person Relationship Tree</title>
+    <style>
+        :root {
+            /* Light theme variables */
+            --bg-color: #f4f4f4;
+            --card-bg: #ffffff;
+            --text-color: #000000;
+            --border-color: #ddd;
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        :root[data-theme="dark"] {
+            /* Dark theme variables */
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #ffffff;
+            --border-color: #404040;
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        #app {
+            margin: 20px;
+        }
+
+        #form-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        form label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+
+        form input, form select, form button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        form button {
+            background-color: #28a745;
+            color: #ffffff;
+            cursor: pointer;
+        }
+
+        form button:hover {
+            background-color: #218838;
+        }
+
+        #tree-container {
+            padding: 15px;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        #tree {
+            margin-top: 10px;
+        }
+
+        .tree-node {
+            margin-left: 20px;
+            list-style-type: none;
+        }
+
+        .tree-node > span {
+            cursor: pointer;
+            color: #007bff;
+        }
+
+        .tree-node > span:hover {
+            text-decoration: underline;
+        }
+        #search-container {
+            margin-bottom: 20px;
+        }
+
+        #search-container input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        .cancel-btn:hover {
+            background: #5a6268 !important;
+        }
+
+        .confirm-btn:hover {
+            background: #bd2130 !important;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            min-width: 300px;
+        }
+
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .modal-buttons button {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .confirm-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .cancel-btn {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .tree-actions {
+            display: inline-flex;
+            gap: 5px;
+            margin-left: 10px;
+        }
+
+        .tree-actions button {
+            padding: 3px 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            color: white;
+        }
+
+        .edit-btn {
+            background-color: #007bff;
+        }
+
+        .edit-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .delete-btn {
+            background-color: #dc3545;
+        }
+
+        .delete-btn:hover {
+            background-color: #bd2130;
+        }
+
+        .collapsible-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 10px;
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .collapsible-header h2 {
+            margin: 0;
+        }
+
+        .collapse-icon {
+            font-size: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .collapse-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .collapsible-content {
+            transition: max-height 0.3s ease-out;
+            max-height: 1000px;
+            overflow: hidden;
+        }
+
+        .collapsible-content.collapsed {
+            max-height: 0;
+        }
+
+        .auth-form {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .auth-form h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .auth-form input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        .auth-form button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .auth-form button:hover {
+            background-color: #0056b3;
+        }
+
+        .auth-form p {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .auth-form a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .auth-form a:hover {
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="app">
+        <button class="theme-toggle" id="theme-toggle">Dark Mode</button>
+        <h1>Person Relationship Tree</h1>
+        <div id="login-container" style="display: block;">
+            <div class="auth-form">
+                <h2>Login</h2>
+                <form id="login-form">
+                    <label for="login-email">Email:</label>
+                    <input type="email" id="login-email" required>
+                    
+                    <label for="login-password">Password:</label>
+                    <input type="password" id="login-password" required>
+                    
+                    <button type="submit" class="login-btn">Login</button>
+                </form>
+                <p>Don't have an account? <a href="#" onclick="toggleAuthForm('register')">Register</a></p>
+            </div>
+            
+            <div class="auth-form" style="display: none;">
+                <h2>Register</h2>
+                <form id="register-form">
+                    <label for="register-email">Email:</label>
+                    <input type="email" id="register-email" required>
+                    
+                    <label for="register-password">Password:</label>
+                    <input type="password" id="register-password" required>
+                    
+                    <button type="submit" class="register-btn">Register</button>
+                </form>
+                <p>Already have an account? <a href="#" onclick="toggleAuthForm('login')">Login</a></p>
+            </div>
+        </div>
+        <div id="main-content" style="display: none;">
+            <div id="form-container">
+                <div class="collapsible-header" onclick="toggleCollapse('form-content')">
+                    <h2>Add/Edit Person</h2>
+                    <span class="collapse-icon">▼</span>
+                </div>
+                <div id="form-content" class="collapsible-content">
+                    <form id="person-form">
+                        <input type="hidden" id="person-id">
+                        <label for="name">Name:</label>
+                        <input type="text" id="name" required>
+                        
+                        <label for="email">Email:</label>
+                        <input type="email" id="email" required>
+                        
+                        <label for="phone">Phone:</label>
+                        <input type="text" id="phone" required>
+                        
+                        <label for="type">Type:</label>
+                        <select id="type" required>
+                            <option value="customer">Customer</option>
+                            <option value="supplier">Supplier</option>
+                        </select>
+                        
+                        <label for="company">Company:</label>
+                        <input type="text" id="company">
+                        
+                        <button type="submit" id="save-btn">Save</button>
+                    </form>
+                </div>
+            </div>
+            <div id="search-container">
+                <div class="collapsible-header" onclick="toggleCollapse('search-content')">
+                    <h2>Search</h2>
+                    <span class="collapse-icon">▼</span>
+                </div>
+                <div id="search-content" class="collapsible-content">
+                    <input type="text" id="search" placeholder="Search by name or company">
+                </div>
+            </div>
+            
+            <div id="tree-container">
+                <h2>Relationship Tree</h2>
+                <div id="tree"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="delete-modal" class="modal">
+        <div class="modal-content">
+            <h3>Confirm Delete</h3>
+            <p>Are you sure you want to delete this person?</p>
+            <div class="modal-buttons">
+                <button class="cancel-btn" onclick="closeDeleteModal()">Cancel</button>
+                <button class="confirm-btn" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        // Import Firebase and required SDKs
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import { getDatabase, ref, push, onValue, update, remove } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyAYlVNQiGhR59v3YilgzGMYHsSYWrK-gn8",
+    authDomain: "amtool-b4bb3.firebaseapp.com",
+    projectId: "amtool-b4bb3",
+    storageBucket: "amtool-b4bb3.firebasestorage.app",
+    messagingSenderId: "388335177291",
+    appId: "1:388335177291:web:26648ab80d8e876a9547ce"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+
+// References
+const form = document.getElementById('person-form');
+const treeContainer = document.getElementById('tree');
+const searchInput = document.getElementById('search');
+
+// Load Data
+let allData = {};
+function loadData() {
+    if (!auth.currentUser) return;
+    const personsRef = ref(db, 'persons');
+    onValue(personsRef, snapshot => {
+        allData = snapshot.val() || {};
+        renderTree(allData);
+    });
+}
+
+// Render Tree
+function renderTree(data) {
+    treeContainer.innerHTML = '';
+    const companies = {};
+
+    // Group people by company
+    for (const id in data) {
+        const person = data[id];
+        if (!companies[person.company]) {
+            companies[person.company] = [];
+        }
+        companies[person.company].push({ id, ...person });
+    }
+
+    // Render each company and its people
+    for (const company in companies) {
+        const companyNode = document.createElement('div');
+        companyNode.className = 'tree-node';
+        companyNode.innerHTML = `<strong>${company || 'No Company'}</strong>`;
+        const peopleList = document.createElement('ul');
+
+        companies[company].forEach(person => {
+            const personNode = document.createElement('li');
+            personNode.innerHTML = `
+                <span>${person.name} (${person.type})</span>
+                <div class="tree-actions">
+                    <button class="edit-btn" onclick="editPerson('${person.id}')">Edit</button>
+                    <button class="delete-btn" onclick="deletePerson('${person.id}')">Delete</button>
+                </div>
+            `;
+            peopleList.appendChild(personNode);
+        });
+
+        companyNode.appendChild(peopleList);
+        treeContainer.appendChild(companyNode);
+    }
+}
+
+// Save Data
+form.addEventListener('submit', e => {
+    e.preventDefault();
+    const id = document.getElementById('person-id').value || push(ref(db, 'persons')).key;
+    const person = {
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        type: document.getElementById('type').value,
+        company: document.getElementById('company').value
+    };
+
+    const personRef = ref(db, 'persons/' + id);
+    update(personRef, person);
+    form.reset();
+});
+
+// Edit Person
+window.editPerson = function(id) {
+    const personRef = ref(db, 'persons/' + id);
+    onValue(personRef, snapshot => {
+        const person = snapshot.val();
+        document.getElementById('person-id').value = id;
+        document.getElementById('name').value = person.name;
+        document.getElementById('email').value = person.email;
+        document.getElementById('phone').value = person.phone;
+        document.getElementById('type').value = person.type;
+        document.getElementById('company').value = person.company;
+    }, { onlyOnce: true });
+};
+
+// Delete Person
+let personToDelete = null;
+
+window.deletePerson = function(id) {
+    personToDelete = id;
+    document.getElementById('delete-modal').style.display = 'block';
+};
+
+window.closeDeleteModal = function() {
+    document.getElementById('delete-modal').style.display = 'none';
+    personToDelete = null;
+};
+
+window.confirmDelete = function() {
+    if (personToDelete) {
+        const personRef = ref(db, 'persons/' + personToDelete);
+        remove(personRef);
+        closeDeleteModal();
+    }
+};
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('delete-modal');
+    if (event.target === modal) {
+        closeDeleteModal();
+    }
+};
+
+// Search Functionality
+searchInput.addEventListener('input', () => {
+    const query = searchInput.value.toLowerCase();
+    const filteredData = Object.fromEntries(
+        Object.entries(allData).filter(([id, person]) => 
+            person.name.toLowerCase().includes(query) || 
+            (person.company || '').toLowerCase().includes(query)
+        )
+    );
+    renderTree(filteredData);
+});
+
+// Initial Load
+loadData();
+
+// Theme Toggle Functionality
+const themeToggle = document.getElementById('theme-toggle');
+const root = document.documentElement;
+
+// Check for saved theme preference
+const savedTheme = localStorage.getItem('theme') || 'light';
+root.setAttribute('data-theme', savedTheme);
+updateThemeToggleButton(savedTheme);
+
+themeToggle.addEventListener('click', () => {
+    const currentTheme = root.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    
+    root.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateThemeToggleButton(newTheme);
+});
+
+function updateThemeToggleButton(theme) {
+    themeToggle.innerHTML = theme === 'light' ? '🌙 Dark Mode' : '☀️ Light Mode';
+}
+
+// Collapse functionality
+window.toggleCollapse = function(contentId) {
+    const content = document.getElementById(contentId);
+    const header = content.previousElementSibling;
+    const icon = header.querySelector('.collapse-icon');
+    
+    content.classList.toggle('collapsed');
+    icon.classList.toggle('collapsed');
+    
+    // Save collapse state to localStorage
+    localStorage.setItem(contentId + '-collapsed', content.classList.contains('collapsed'));
+};
+
+// Restore collapse state on page load
+document.addEventListener('DOMContentLoaded', () => {
+    const sections = ['form-content', 'search-content'];
+    sections.forEach(section => {
+        const isCollapsed = localStorage.getItem(section + '-collapsed') === 'true';
+        if (isCollapsed) {
+            const content = document.getElementById(section);
+            const icon = content.previousElementSibling.querySelector('.collapse-icon');
+            content.classList.add('collapsed');
+            icon.classList.add('collapsed');
+        }
+    });
+});
+
+// Authentication state observer
+onAuthStateChanged(auth, (user) => {
+    const loginContainer = document.getElementById('login-container');
+    const mainContent = document.getElementById('main-content');
+    
+    if (user) {
+        // User is signed in
+        loginContainer.style.display = 'none';
+        mainContent.style.display = 'block';
+        loadData(); // Load data only after authentication
+    } else {
+        // User is signed out
+        loginContainer.style.display = 'block';
+        mainContent.style.display = 'none';
+    }
+});
+
+// Login form handler
+document.getElementById('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    
+    signInWithEmailAndPassword(auth, email, password)
+        .catch((error) => {
+            alert('Login error: ' + error.message);
+        });
+});
+
+// Register form handler
+document.getElementById('register-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('register-email').value;
+    const password = document.getElementById('register-password').value;
+    
+    createUserWithEmailAndPassword(auth, email, password)
+        .catch((error) => {
+            alert('Registration error: ' + error.message);
+        });
+});
+
+// Add logout functionality
+window.logout = function() {
+    signOut(auth).catch((error) => {
+        alert('Logout error: ' + error.message);
+    });
+};
+
+// Add a logout button to your HTML
+const logoutButton = document.createElement('button');
+logoutButton.className = 'theme-toggle';
+logoutButton.style.right = '150px';  // Position it next to the theme toggle
+logoutButton.innerHTML = '🚪 Logout';
+logoutButton.onclick = logout;
+document.querySelector('#app').appendChild(logoutButton);
+
+// Toggle authentication forms
+window.toggleAuthForm = function(form) {
+    const loginForm = document.querySelector('#login-container .auth-form:first-child');
+    const registerForm = document.querySelector('#login-container .auth-form:last-child');
+    
+    if (form === 'register') {
+        loginForm.style.display = 'none';
+        registerForm.style.display = 'block';
+    } else {
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+    }
+};
+
+    </script>
+</body>
+</html>
